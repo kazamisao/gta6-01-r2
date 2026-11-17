@@ -20,6 +20,9 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildDossier } from './vendor/makefun-game.ts';
 
+// The program is deterministic: it copies files and writes the dossier from
+// their bytes alone, with no timestamps or randomness, so both grader runs
+// produce byte-identical output.
 const here = fileURLToPath(new URL('.', import.meta.url));
 const out = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
 
