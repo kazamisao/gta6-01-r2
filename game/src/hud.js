@@ -88,9 +88,12 @@ function drawFullMap(ctx, state, vw, vh) {
   ctx.fillStyle = PALETTE.road;
   for (const a of ROADS.avenues) ctx.fillRect(x + a * scale - 1.5, y, 3, size);
   for (const s of ROADS.streets) ctx.fillRect(x, y + s * scale - 1.5, size, 3);
-  // Districts.
+  // Districts (skip a name when a landmark label sits on top of it).
   for (const d of DISTRICTS) {
-    text(ctx, d.name.toUpperCase(), x + (d.x + d.w / 2) * scale, y + (d.y + d.h / 2) * scale, 13, 'rgba(245,239,224,0.75)', 'center', 'middle');
+    const clash = LANDMARKS.some((lm) => Math.hypot(lm.x - (d.x + d.w / 2), lm.y - (d.y + d.h / 2)) < 190);
+    if (clash) continue;
+    const lx = Math.max(x + 52, Math.min(x + size - 52, x + (d.x + d.w / 2) * scale));
+    text(ctx, d.name.toUpperCase(), lx, y + (d.y + d.h / 2) * scale, 13, 'rgba(245,239,224,0.75)', 'center', 'middle');
   }
   // Landmarks.
   for (const lm of LANDMARKS) {

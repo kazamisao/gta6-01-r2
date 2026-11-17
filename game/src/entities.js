@@ -3,7 +3,7 @@
 // every interesting thing that happens comes back as an event for main.js.
 import { CAR, CITY, LANDMARKS, MISSIONS, PLAYER, ROADS, TRAFFIC, WANTED } from './config.js';
 import { mulberry32, pick, range } from './random.js';
-import { buildCity, isOnRoad, nearestRoadPoint, resolveCircleBuildings } from './city.js';
+import { buildCity, collideCircleBuildings, nearestRoadPoint, resolveCircleBuildings } from './city.js';
 import { addHeat, clearWanted, createWanted, decayWanted, wantedStars } from './wanted.js';
 import { advanceMission, createMissions, currentMission, missionObjective } from './missions.js';
 import { circlesHit, stepCar } from './physics.js';
@@ -93,13 +93,14 @@ export function createGame(seed) {
     shopMsg: '',
     autosaveTimer: 0,
   };
-  // A few parked cars near the start so the first steal is quick.
+  // A few parked cars on the street by the garage so the first steal is quick
+  // and the car is already on a road, ready to drive.
   for (let i = 0; i < 6; i++) {
     const c = randomRoadCar(rng, city);
     c.parked = true;
     c.speed = 0;
-    c.x = garage.x + 40 + i * 90;
-    c.y = garage.y - 40;
+    c.x = garage.x + 100 + i * 90;
+    c.y = garage.y;
     c.angle = 0;
     state.cars.push(c);
   }
