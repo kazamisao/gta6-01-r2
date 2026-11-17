@@ -6,11 +6,17 @@ import { mulberry32, pick, range } from './random.js';
 import { buildCity, collideCircleBuildings, nearestRoadPoint, resolveCircleBuildings } from './city.js';
 import { addHeat, clearWanted, createWanted, decayWanted, wantedStars } from './wanted.js';
 import { advanceMission, createMissions, currentMission, missionObjective } from './missions.js';
-import { circlesHit, stepCar } from './physics.js';
+import { circlesHit, separateCars, stepCar } from './physics.js';
 import { dropCash, fireBullet, punch, spawnParticle, stepBullets } from './combat.js';
 
 const CAR_COLORS = ['#c94b4b', '#4b7ac9', '#e8e0d0', '#58a86b', '#d8a04b', '#8e6ac9', '#c9c9c9'];
 const PED_COLORS = ['#e8e0d0', '#7ab8c9', '#c97a7a', '#a8c97a', '#d8b84b', '#b89ad8'];
+
+// Police tuning: top speed stays below the player's untuned 520 so a clean
+// getaway is possible, and ramming costs 40 hp/s — about 2.5 s of contact
+// to wreck a full-health car, not under one second.
+const POLICE_TOP_SPEED = 480;
+const POLICE_RAM_DPS = 40;
 
 function landmark(id) {
   return LANDMARKS.find((l) => l.id === id);
@@ -211,7 +217,10 @@ function stepPolice(state, cop, dt, events) {
     while (diff > Math.PI) diff -= Math.PI * 2;
     while (diff < -Math.PI) diff += Math.PI * 2;
     cop.angle += Math.max(-3.2 * dt, Math.min(3.2 * dt, diff));
-    cop.speed = Math.min(560, cop.speed + 380 * dt);
+    // Capped below the player's untuned top speed (520), so a clean
+    // getaway in a straight line is possible; the cops still close in
+    // through corners and numbers.
+    cop.speed = Math.min(POLICE_TOP_SPEED, cop.speed + 380 * dt);
     cop.x += Math.cos(cop.angle) * cop.speed * dt;
     cop.y += Math.sin(cop.angle) * cop.speed * dt;
     const hit = collideCircleBuildings(cop.x, cop.y, 30, state.city);
@@ -222,9 +231,12 @@ function stepPolice(state, cop, dt, events) {
       cop.angle += 0.6;
     }
     if (p.inCar && p.car && circlesHit(cop, 30, p.car, 30)) {
-      p.car.hp -= 14 * dt * 10;
+      // Ram damage is POLICE_RAM_DPS per second: a full-health car
+      // survives about 2.5 s of contact, so a ram hurts but no longer
+      // wrecks the car in under a second. The cop still slows on impact.
+      p.car.hp -= POLICE_RAM_DPS * dt;
       cop.speed *= 0.5;
-      if (Math.random() < dt * 8) events.push({ type: 'sound', name: 'crash' });
+      if (state.rng() < dt * 8) events.push({ type: 'sound', name: 'crash' });
       if (p.car.hp <= 0) {
         events.push({ type: 'car-wrecked' });
         p.car.stopped = true;
@@ -368,6 +380,14 @@ export function stepGame(state, controls, dt) {
   for (const car of state.cars) {
     if (car === p.car) continue;
     stepTrafficCar(state, car, dt);
+  }
+  // The player's car cannot pass through traffic: any overlap with a
+  // traffic car pushes the cars apart and bleeds speed on contact.
+  if (p.inCar && p.car) {
+    for (const car of state.cars) {
+      if (car === p.car) continue;
+      separateCars(p.car, car);
+    }
   }
   for (const ped of state.peds) stepPed(state, ped, dt);
   if (wantedStars(state.wanted) > 0) spawnPolice(state);

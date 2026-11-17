@@ -34,6 +34,10 @@ export function createInput(target) {
       held.add(event.code);
       event.preventDefault();
     } else if (CONFIRM.has(event.code)) {
+      // Space doubles as the brake, so track it in `held` as well as
+      // queueing the one-shot confirm; keyup already removes it. Enter
+      // stays confirm-only — it has no held-key job.
+      if (event.code === 'Space') held.add('Space');
       if (!event.repeat) actions |= ACTION_CONFIRM;
       event.preventDefault();
     } else if (PAUSE.has(event.code)) {
@@ -84,7 +88,10 @@ export function createInput(target) {
       };
     },
     sprint() { return held.has('ShiftLeft') || held.has('ShiftRight'); },
-    brake() { return has(DOWN) || held.has('Space'); },
+    // Space only. S / ArrowDown is reverse (throttle -1..0), not a brake:
+    // folding reverse into brake() used to cancel the reverse thrust the
+    // moment the car slowed through zero, pinning it at speed 0.
+    brake() { return held.has('Space'); },
     mouse() { return { x: mouseX, y: mouseY, down: mouseDown }; },
     /** The one-shot presses since the last call, as ACTION_* flags. */
     takeActions() {

@@ -44,6 +44,34 @@ function placePolice(state, spots) {
 }
 
 /**
+ * Shots never step the game, so the runtime car collision cannot fix a
+ * staged overlap: slide any traffic car that sits too close to a staged
+ * actor along its own road until it is clear (wrapping along the road so
+ * it stays in the world). Two 30-radius cars need 60 px to stop touching;
+ * CLEAR_PX keeps them visibly apart with margin.
+ */
+const CLEAR_PX = 140;
+
+function clearStagedActors(state, actors) {
+  for (const car of state.cars) {
+    if (car === state.player.car) continue;
+    let tries = 0;
+    while (tries < 12 && actors.some(([ax, ay]) => Math.hypot(car.x - ax, car.y - ay) < CLEAR_PX)) {
+      if (car.avenue) {
+        car.y += 160 * (car.dir || 1);
+        if (car.y > 3300) car.y -= 3000;
+        if (car.y < 300) car.y += 3000;
+      } else {
+        car.x += 160 * (car.dir || 1);
+        if (car.x > 3300) car.x -= 3000;
+        if (car.x < 300) car.x += 3000;
+      }
+      tries += 1;
+    }
+  }
+}
+
+/**
  * Stage `name` on a fresh game and return { state, screen, withMap }.
  * Unknown names stage the title screen.
  */
@@ -55,6 +83,13 @@ export function stageShot(name, seed) {
     placeConvoy(state);
     givePlayerCar(state, 1560, 1800, 0, 380);
     placePolice(state, [[1380, 1740], [1470, 1860]]);
+    // Keep random traffic out of the staged cars: with seed 7 a traffic
+    // car spawned on the player's bumper and the two cars visibly clipped.
+    clearStagedActors(state, [
+      [1560, 1800],
+      [1380, 1740], [1470, 1860],
+      [1830, 1800], [1960, 1800], [2090, 1800],
+    ]);
     addHeat(state.wanted, 125); // 3 stars
     state.banner = { text: 'MISSION: HIGH TIDE — Stop the Venn convoy!', until: 9999 };
     return { state, screen: SCREEN_PLAY, withMap: false };

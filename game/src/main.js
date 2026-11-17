@@ -88,6 +88,18 @@ function runGame() {
       state.camera.y = state.player.y;
       state.upgrades = saved.upgrades ?? { armor: false, engine: false };
       state.deedsTaken = saved.deedsTaken ?? false;
+      // Ana's state travels with the save: without it, a reload during
+      // the delivery step left her waiting at the market while the
+      // delivery trigger needs her following, and mission 1 could never
+      // finish.
+      if (saved.witnessWaiting !== undefined) state.witness.waiting = saved.witnessWaiting;
+      if (saved.witnessFollowing !== undefined) state.witness.following = saved.witnessFollowing;
+      if (missionObjective(state.missions).id === 'm1-deliver') {
+        // Step m1-deliver is only reachable after Ana was picked up, so
+        // an older save without witness fields still resumes correctly.
+        state.witness.waiting = false;
+        state.witness.following = true;
+      }
       if (state.missions.index >= 3) state.missions.done = true;
     }
   } catch { /* A broken save just starts fresh. */ }
@@ -108,6 +120,8 @@ function runGame() {
         y: state.player.y,
         upgrades: state.upgrades,
         deedsTaken: state.deedsTaken,
+        witnessWaiting: state.witness.waiting,
+        witnessFollowing: state.witness.following,
         time: state.time,
       }));
       window.localStorage.setItem('solara-bay.best', String(Math.max(best, state.missions.cash)));

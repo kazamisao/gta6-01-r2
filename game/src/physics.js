@@ -60,3 +60,44 @@ export function circlesHit(a, ar, b, br) {
   const r = ar + br;
   return dx * dx + dy * dy < r * r;
 }
+
+/**
+ * Push two overlapping cars apart and bleed both speeds, so cars can no
+ * longer drive through each other. A parked car is treated as fixed: only
+ * the other car moves. Returns true when the cars were overlapping.
+ */
+export function separateCars(a, b) {
+  const minDist = RADIUS * 2;
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const distSq = dx * dx + dy * dy;
+  if (distSq >= minDist * minDist) return false;
+  if (a.parked && b.parked) return false;
+  let dist = Math.sqrt(distSq);
+  let nx;
+  let ny;
+  if (dist < 0.001) {
+    // Exactly on top of each other: separate along a's heading.
+    nx = Math.cos(a.angle);
+    ny = Math.sin(a.angle);
+    dist = 0;
+  } else {
+    nx = dx / dist;
+    ny = dy / dist;
+  }
+  const overlap = minDist - dist;
+  const aShare = a.parked ? 0 : b.parked ? 1 : 0.5;
+  const bShare = 1 - aShare;
+  a.x -= nx * overlap * aShare;
+  a.y -= ny * overlap * aShare;
+  b.x += nx * overlap * bShare;
+  b.y += ny * overlap * bShare;
+  // Bleed in proportion to how deep the overlap is: a head-on shunt costs
+  // up to a quarter of the speed, while a paint-scraping graze — the kind
+  // that re-touches for several frames as traffic creeps past — costs
+  // almost nothing per frame.
+  const keep = 1 - 0.25 * (overlap / minDist);
+  a.speed *= keep;
+  b.speed *= keep;
+  return true;
+}
