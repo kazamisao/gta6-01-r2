@@ -86,7 +86,8 @@ export function createRenderer(canvas) {
     canvas.style.height = `${window.innerHeight}px`;
   }
 
-  function drawWorld(state) {
+  function drawWorld(state, opts) {
+    const hideLabels = opts && opts.hideLabels;
     const cam = state.camera;
     const vw = canvas.width / (window.devicePixelRatio || 1);
     const vh = canvas.height / (window.devicePixelRatio || 1);
@@ -106,13 +107,37 @@ export function createRenderer(canvas) {
     const y1 = oy + viewH + 80;
 
     // Ground.
-    ctx.fillStyle = '#33302e';
+    ctx.fillStyle = '#453d33';
     ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
-    // Water and beach on the west edge.
+    // Water and beach on the west edge, with wave lines and sand speckles.
     ctx.fillStyle = PALETTE.water;
     ctx.fillRect(Math.max(x0, 0), y0, Math.min(CITY.waterWidth, x1) - Math.max(x0, 0), y1 - y0);
+    ctx.strokeStyle = 'rgba(232,240,240,0.35)';
+    ctx.lineWidth = 2;
+    for (let wy = Math.max(0, Math.floor(y0 / 90) * 90); wy < Math.min(CITY.size, y1); wy += 90) {
+      if (CITY.waterWidth < x0 || CITY.waterWidth > x1) continue;
+      ctx.beginPath();
+      ctx.moveTo(Math.max(x0, 8), wy);
+      ctx.quadraticCurveTo(48, wy + 10, Math.min(x1, CITY.waterWidth - 8), wy);
+      ctx.stroke();
+    }
     ctx.fillStyle = PALETTE.sand;
     ctx.fillRect(Math.max(x0, CITY.waterWidth), y0, Math.min(CITY.beachWidth, x1) - Math.max(x0, CITY.waterWidth), y1 - y0);
+    ctx.fillStyle = 'rgba(120,90,40,0.5)';
+    for (let sy = Math.max(0, Math.floor(y0 / 47) * 47); sy < Math.min(CITY.size, y1); sy += 47) {
+      for (let sx = Math.max(CITY.waterWidth + 8, Math.floor(x0 / 53) * 53); sx < Math.min(CITY.beachWidth - 8, x1); sx += 53) {
+        ctx.fillRect(sx + ((sy * 7) % 23), sy + ((sx * 3) % 17), 3, 3);
+      }
+    }
+    // Marina pier: wooden planks reaching into the water at y=1800.
+    if (1800 > y0 - 60 && 1800 < y1 + 60 && x0 < 150) {
+      ctx.fillStyle = '#8a6a4a';
+      ctx.fillRect(Math.max(x0, 0), 1788, Math.min(150, x1) - Math.max(x0, 0), 24);
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      for (let px = Math.max(0, Math.floor(x0 / 18) * 18); px < Math.min(150, x1); px += 18) {
+        ctx.fillRect(px, 1788, 2, 24);
+      }
+    }
     // Parks.
     ctx.fillStyle = PALETTE.park;
     for (const park of state.city.parks) {
@@ -169,7 +194,7 @@ export function createRenderer(canvas) {
       if (lm.kind === 'garage' || lm.kind === 'depot' || lm.kind === 'pier') {
         ctx.fillStyle = lm.kind === 'garage' ? '#3f7a44' : lm.kind === 'depot' ? '#7a5a3a' : '#8a6a4a';
         ctx.fillRect(lm.x - 70, lm.y - 50, 140, 100);
-        text(ctx, lm.name, lm.x, lm.y - 58, 15, PALETTE.text, 'center');
+        if (!hideLabels) text(ctx, lm.name, lm.x, lm.y - 58, 15, PALETTE.text, 'center');
       }
       if (lm.kind === 'tower' || lm.kind === 'venn') {
         ctx.fillStyle = lm.kind === 'venn' ? '#23232e' : '#5a4a7a';
@@ -178,7 +203,7 @@ export function createRenderer(canvas) {
         for (let wy = lm.y - 40; wy < lm.y + 45; wy += 20) {
           for (let wx = lm.x - 40; wx < lm.x + 45; wx += 20) ctx.fillRect(wx, wy, 8, 10);
         }
-        text(ctx, lm.name, lm.x, lm.y - 63, 15, PALETTE.text, 'center');
+        if (!hideLabels) text(ctx, lm.name, lm.x, lm.y - 63, 15, PALETTE.text, 'center');
       }
     }
     // Cash pickups.
@@ -206,10 +231,16 @@ export function createRenderer(canvas) {
       if (ped.x < x0 || ped.x > x1 || ped.y < y0 || ped.y > y1) continue;
       drawPed(ctx, ped.x, ped.y, ped.angle, ped.color, ped.down);
     }
-    // Traffic cars.
+    // Traffic cars (the player's car is one of them; Ana rides along in it).
     for (const car of state.cars) {
       if (car.x < x0 || car.x > x1 || car.y < y0 || car.y > y1) continue;
       drawCar(ctx, car.x, car.y, car.angle, car.color, { smoke: car.hp < 40 });
+      if (state.player.car === car && state.witness.following) {
+        ctx.fillStyle = '#ff7ab8';
+        ctx.beginPath();
+        ctx.arc(car.x - Math.cos(car.angle) * 8, car.y - Math.sin(car.angle) * 8, 6, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
     // Convoy.
     for (const car of state.convoy) {
@@ -288,7 +319,7 @@ export function createRenderer(canvas) {
     // Sunset wash over everything.
     const grad = ctx.createRadialGradient(vw / 2, vh / 2, vh * 0.3, vw / 2, vh / 2, vh * 0.9);
     grad.addColorStop(0, 'rgba(255,154,92,0)');
-    grad.addColorStop(1, 'rgba(255,154,92,0.10)');
+    grad.addColorStop(1, 'rgba(255,154,92,0.16)');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, vw, vh);
   }
@@ -313,20 +344,22 @@ export function createRenderer(canvas) {
   }
 
   function drawTitle(state, best, withMap) {
-    drawWorld(state);
+    drawWorld(state, { hideLabels: true });
     const vw = canvas.width / (window.devicePixelRatio || 1);
     const vh = canvas.height / (window.devicePixelRatio || 1);
     const ratio = window.devicePixelRatio || 1;
     ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
     ctx.fillStyle = 'rgba(20,16,31,0.55)';
     ctx.fillRect(0, 0, vw, vh);
-    text(ctx, 'SOLARA BAY', vw / 2, vh / 2 - 150, 72, PALETTE.text, 'center');
-    text(ctx, 'An open-world story in a city that never sleeps', vw / 2, vh / 2 - 100, 20, PALETTE.sunset, 'center');
-    text(ctx, 'Nia Reyes, getaway driver. Marlo Venn wants the waterfront.', vw / 2, vh / 2 - 66, 17, PALETTE.muted, 'center');
-    text(ctx, 'Three missions. One city. Steal it back.', vw / 2, vh / 2 - 38, 17, PALETTE.muted, 'center');
-    text(ctx, 'WASD move  •  E steal / enter car  •  F punch  •  Click shoot  •  TAB map  •  P pause', vw / 2, vh / 2 + 8, 15, PALETTE.text, 'center');
-    text(ctx, 'Press Space or click to start', vw / 2, vh / 2 + 52, 22, PALETTE.star, 'center');
-    if (best > 0) text(ctx, `Best cash: $${best}`, vw / 2, vh / 2 + 92, 16, PALETTE.muted, 'center');
+    // With the map panel on the right, the title block moves left so nothing overlaps.
+    const cx = withMap ? Math.max(330, vw / 2 - 240) : vw / 2;
+    text(ctx, 'SOLARA BAY', cx, vh / 2 - 150, 72, PALETTE.text, 'center');
+    text(ctx, 'An open-world story in a city that never sleeps', cx, vh / 2 - 100, 20, PALETTE.sunset, 'center');
+    text(ctx, 'Nia Reyes, getaway driver. Marlo Venn wants the waterfront.', cx, vh / 2 - 66, 17, PALETTE.muted, 'center');
+    text(ctx, 'Three missions. One city. Steal it back.', cx, vh / 2 - 38, 17, PALETTE.muted, 'center');
+    text(ctx, 'WASD move  •  E steal / enter car  •  F punch  •  Click shoot  •  TAB map  •  P pause', cx, vh / 2 + 8, 15, PALETTE.text, 'center');
+    text(ctx, 'Press Space or click to start', cx, vh / 2 + 52, 22, PALETTE.star, 'center');
+    if (best > 0) text(ctx, `Best cash: $${best}`, cx, vh / 2 + 92, 16, PALETTE.muted, 'center');
     if (withMap) drawTitleMap(state, vw, vh);
   }
 
@@ -352,14 +385,25 @@ export function createRenderer(canvas) {
     for (const a of ROADS.avenues) ctx.fillRect(x + a * scale - 1, y, 2, size);
     for (const s of ROADS.streets) ctx.fillRect(x, y + s * scale - 1, size, 2);
     for (const d of state.city.districts) {
-      text(ctx, d.name.toUpperCase(), x + (d.x + d.w / 2) * scale, y + (d.y + d.h / 2) * scale, 10, 'rgba(245,239,224,0.8)', 'center', 'middle');
+      // Skip a district name when a landmark label sits on top of it.
+      const clash = LANDMARKS.some((lm) => Math.hypot(lm.x - (d.x + d.w / 2), lm.y - (d.y + d.h / 2)) < 190);
+      if (clash) continue;
+      const lx = Math.max(x + 46, Math.min(x + size - 46, x + (d.x + d.w / 2) * scale));
+      text(ctx, d.name.toUpperCase(), lx, y + (d.y + d.h / 2) * scale, 10, 'rgba(245,239,224,0.8)', 'center', 'middle');
     }
     for (const lm of LANDMARKS) {
       ctx.fillStyle = PALETTE.star;
       ctx.beginPath();
       ctx.arc(x + lm.x * scale, y + lm.y * scale, 3, 0, Math.PI * 2);
       ctx.fill();
-      text(ctx, lm.name, x + lm.x * scale + 5, y + lm.y * scale + 3, 9, PALETTE.text, 'left', 'middle');
+      ctx.font = `9px ${FONT}`;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(20,16,31,0.9)';
+      ctx.strokeText(lm.name, x + lm.x * scale + 5, y + lm.y * scale + 3);
+      ctx.fillStyle = PALETTE.text;
+      ctx.fillText(lm.name, x + lm.x * scale + 5, y + lm.y * scale + 3);
     }
     ctx.fillStyle = PALETTE.player;
     ctx.beginPath();

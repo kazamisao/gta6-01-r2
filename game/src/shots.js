@@ -8,6 +8,7 @@ import { SCREEN_MAP, SCREEN_PLAY, SCREEN_TITLE } from './render.js';
 function givePlayerCar(state, x, y, angle, speed) {
   const car = state.cars[0];
   car.parked = false;
+  car.color = '#ffd23e'; // Nia's yellow getaway car — unmistakable in every shot.
   car.x = x;
   car.y = y;
   car.angle = angle;
@@ -27,7 +28,7 @@ function placeConvoy(state) {
   state.convoy = [];
   for (let i = 0; i < 3; i++) {
     state.convoy.push({
-      x: 1950 + i * 130, y: 1800, angle: 0, speed: 150,
+      x: 1830 + i * 130, y: 1800, angle: 0, speed: 150,
       hp: 100, color: '#1d1d24', police: false, convoy: true,
       stopped: false, tuned: false, avenue: false, line: 1800, dir: 1, cruise: 150,
     });
@@ -62,21 +63,22 @@ export function stageShot(name, seed) {
     state.missions.index = 0;
     state.missions.step = 0;
     const p = state.player;
-    p.x = 330;
-    p.y = 1240;
+    p.x = 470;
+    p.y = 1330;
     p.angle = Math.PI / 2;
-    state.camera.x = 330;
-    state.camera.y = 1240;
-    // A car to steal, parked by the pier road.
+    state.camera.x = 430;
+    state.camera.y = 1330;
+    // A car to steal, parked by the pier road, with the beach behind it.
     const car = state.cars[1];
     car.parked = true;
-    car.x = 420;
+    car.color = '#4b7ac9';
+    car.x = 540;
     car.y = 1330;
     car.angle = Math.PI / 2;
     // Pedestrians strolling the beach front.
-    state.peds.slice(0, 8).forEach((ped, i) => {
-      ped.x = 300 + i * 40;
-      ped.y = 1150 + (i % 3) * 60;
+    state.peds.slice(0, 10).forEach((ped, i) => {
+      ped.x = 300 + (i % 5) * 55;
+      ped.y = 1180 + Math.floor(i / 5) * 90;
       ped.down = 0;
     });
     state.banner = { text: 'MISSION: BORROWED WHEELS — Steal a car', until: 9999 };

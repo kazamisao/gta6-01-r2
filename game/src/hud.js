@@ -2,7 +2,8 @@
 // on top of the world. The minimap is a 180 px live view of the city;
 // the map (TAB) is the whole city with labelled districts and landmarks.
 import { CITY, DISTRICTS, FONT, LANDMARKS, PALETTE, ROADS, SHOP } from './config.js';
-import { missionObjective, missionTitle, wantedStars } from './entities.js';
+import { missionObjective, wantedStars } from './entities.js';
+import { missionTitle } from './missions.js';
 
 const MAP_SIZE = 180;
 
@@ -33,11 +34,13 @@ function drawMinimap(ctx, state, x, y, size) {
   ctx.lineWidth = 1;
   ctx.strokeRect(x - 6, y - 6, size + 12, size + 12);
   // Water + sand + roads.
+  ctx.fillStyle = '#1c1826';
+  ctx.fillRect(x, y, size, size);
   ctx.fillStyle = PALETTE.water;
   ctx.fillRect(x, y, CITY.waterWidth * scale, size);
   ctx.fillStyle = PALETTE.sand;
   ctx.fillRect(x + CITY.waterWidth * scale, y, (CITY.beachWidth - CITY.waterWidth) * scale, size);
-  ctx.fillStyle = PALETTE.road;
+  ctx.fillStyle = '#8a8694';
   for (const a of ROADS.avenues) ctx.fillRect(x + a * scale - 1, y, 2, size);
   for (const s of ROADS.streets) ctx.fillRect(x, y + s * scale - 1, size, 2);
   // Mission target.

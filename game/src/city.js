@@ -57,12 +57,25 @@ export function buildCity(seed) {
         parks.push({ x: bx0, y: by0, w: bx1 - bx0, h: by1 - by0 });
         continue;
       }
+      // One building per cell of a 2x2 sub-grid, jittered inside its cell,
+      // so buildings in a block never overlap each other.
+      const cells = [
+        [bx0, by0, (bx0 + bx1) / 2, (by0 + by1) / 2],
+        [(bx0 + bx1) / 2, by0, bx1, (by0 + by1) / 2],
+        [bx0, (by0 + by1) / 2, (bx0 + bx1) / 2, by1],
+        [(bx0 + bx1) / 2, (by0 + by1) / 2, bx1, by1],
+      ];
+      for (let i = cells.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        [cells[i], cells[j]] = [cells[j], cells[i]];
+      }
       const count = 1 + Math.floor(rng() * 3);
       for (let n = 0; n < count; n++) {
-        const w = range(rng, 60, 120);
-        const h = range(rng, 60, 120);
-        const x = range(rng, bx0, Math.max(bx0 + 1, bx1 - w));
-        const y = range(rng, by0, Math.max(by0 + 1, by1 - h));
+        const [cx0, cy0, cx1, cy1] = cells[n];
+        const w = range(rng, 55, Math.min(110, cx1 - cx0 - 8));
+        const h = range(rng, 55, Math.min(110, cy1 - cy0 - 8));
+        const x = range(rng, cx0 + 4, Math.max(cx0 + 5, cx1 - w - 4));
+        const y = range(rng, cy0 + 4, Math.max(cy0 + 5, cy1 - h - 4));
         buildings.push({
           x, y, w, h,
           height: range(rng, 16, 64),

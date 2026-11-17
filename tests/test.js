@@ -63,14 +63,14 @@ test('car physics: building collision stops the car', () => {
 
 test('car on open road keeps moving and steering turns it', () => {
   const city = buildCity(7);
-  // South down avenue x=900: a long straight run with no buildings on the road.
-  const car = { x: 900, y: 400, angle: Math.PI / 2, speed: 0, width: 46, length: 84 };
-  // Forty steps is short enough to stay on the avenue: it proves the
-  // steering and acceleration themselves, not the navigation.
+  // South down the open beach strip: no buildings anywhere near it, so the
+  // test proves the steering and acceleration themselves, not the navigation.
+  const car = { x: 170, y: 400, angle: Math.PI / 2, speed: 0, width: 46, length: 84 };
+  // Forty steps is short enough to stay on the beach.
   for (let i = 0; i < 40; i++) stepCar(car, { throttle: 1, steer: 0.5, brake: false }, 1 / 60, city);
   assert.ok(car.speed > 50, 'car accelerated');
   assert.ok(car.angle > Math.PI / 2 + 0.2, 'steering turned the car');
-  assert.ok(car.y > 450, 'car travelled down the avenue');
+  assert.ok(car.y > 450, 'car travelled down the beach');
 });
 
 test('wanted: crime raises stars, decay lowers them', () => {
